@@ -11,6 +11,8 @@ from PIL import Image, ImageDraw, ImageTk
 
 class Overlay:
     def __init__(self, fetchTrack):
+        # initialises tkinter overlay window, sets variables to be used for style and layout
+        # creates fetchTrack function variable to be used for fetching track info in update loop
 
         self.fetchTrack = fetchTrack
         self.root = tk.Tk()
@@ -68,6 +70,8 @@ class Overlay:
         self.artistLabel.pack(fill="x")
 
     def fetchArt(self, url):
+        # fetches albun art from spotify, resizes it to fit the overlay
+        # and returns both the image and raw data for color extraction
         with urllib.request.urlopen(url) as response:
             data = response.read()
         img = Image.open(io.BytesIO(data))
@@ -75,6 +79,7 @@ class Overlay:
         return ImageTk.PhotoImage(img), data
 
     def truncateText(self, text, maxWidth):
+        # truncates text to fit the overlay, replaces end with elipsis if too long
         f = font.Font(font=self.nameLabel.cget("font"))
         if f.measure(text) <= maxWidth:
             return text
@@ -83,6 +88,7 @@ class Overlay:
         return text + "..."
 
     def onMouseEnter(self, event):
+        # when mouse enters the overlay, cancels any hide timers and resets opacity to full, then starts polling mouse position
         if self.hideTimer:
             self.root.after_cancel(self.hideTimer)
             self.hideTimer = None
@@ -90,6 +96,7 @@ class Overlay:
         self.pollMouse()
 
     def pollMouse(self):
+        # polls mouse position every 100ms, starts fade out if mouse leaves the overlay
         x, y = self.root.winfo_pointerxy()
         winX = self.root.winfo_rootx()
         winY = self.root.winfo_rooty()
@@ -102,6 +109,7 @@ class Overlay:
             self.root.after(100, self.pollMouse)
 
     def fadeIn(self, alpha=0.0):
+        # function to fade in overlay once mouse leaves
         if alpha < 0.8:
             alpha = round(alpha + 0.05, 2)
             self.root.attributes("-alpha", alpha)
@@ -110,12 +118,14 @@ class Overlay:
             self.hideTimer = None
 
     def createTrayIcon(self):
+        # creates a windows taskbar icon
         img = Image.new("RGB", (64, 64), color="#1DB954")
         draw = ImageDraw.Draw(img)
         draw.ellipse([8, 8, 56, 56], fill="white")
         return img
 
     def getColors(self, imageData):
+        # takes image data from album art, sets variables for dominant and accent colors to be used for overlay background and text
         ct = ColorThief(io.BytesIO(imageData))
         dominant = ct.get_color(quality=1)
         palette = ct.get_palette(color_count=2)
@@ -123,16 +133,19 @@ class Overlay:
         return dominant, accent
 
     def getTextColor(self, bgColor):
+        # uses contrast formula to determine whether text should be black or white based on background color for readability
         r, g, b = bgColor
         luminance = 0.299 * r + 0.587 * g + 0.114 * b
         return "#000000" if luminance > 128 else "#ffffff"
 
     def update(self):
+        # updates the overlay with current track info, album art and colors, runs in a separate thread to avoid blocking the UI
         thread = threading.Thread(target=self.fetchAndUpdate, daemon=True)
         thread.start()
         self.root.after(1000, self.update)
 
     def fetchAndUpdate(self):
+        # fetches track info, album art and colors, then applies updates to the UI on the main thread
         track = self.fetchTrack()
         if track:
             art, imageData = self.fetchArt(track["art"])
@@ -144,6 +157,7 @@ class Overlay:
             self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
 
     def applyUpdate(self, track, art, bg, textColor):
+        # applies updates to the UI elements, truncates text if necessary to fit the overlay
         maxWidth = self.nameLabel.winfo_width()
         if maxWidth <= 1:
             maxWidth = self.overlayWidth - self.artSize - 40
@@ -158,10 +172,11 @@ class Overlay:
         self.artistLabel.configure(bg=bg, fg=textColor)
 
     def run(self):
+        # starts the overlay and begins update loop
         self.update()
 
+        # create system tray icon with quit option
         menu = pystray.Menu(pystray.MenuItem("Quit", self.quit))
-
         self.trayIcon = pystray.Icon(
             "anklebiter",
             self.createTrayIcon(),
@@ -175,5 +190,6 @@ class Overlay:
         self.root.mainloop()
 
     def quit(self):
+        # ends process when quit option is selected from tray icon
         self.trayIcon.stop()
         self.root.destroy()
