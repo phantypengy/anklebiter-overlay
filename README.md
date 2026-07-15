@@ -8,7 +8,7 @@ an overlay that displays song title, artist, and album art. written in python.
 
 currently this is only tested on windows 11.
 
-### features
+### dilly-dallies
 
 - disappears on mouse-over to allow for click-through
 - system tray icon to close the overlay
