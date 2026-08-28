@@ -8,6 +8,8 @@ import pystray
 from colorthief import ColorThief
 from PIL import Image, ImageDraw, ImageTk
 
+from spotify import getCurrentTrack
+
 
 class Overlay:
     def __init__(self, fetchTrack):
@@ -22,9 +24,9 @@ class Overlay:
         self.screenHeight = self.root.winfo_screenheight()
         self.overlayWidth = int(self.screenWidth * 0.14)
         self.overlayHeight = int(self.screenHeight * 0.05)
-        self.overlayX = int(self.screenWidth * 0.005)
-        self.overlayY = int(self.screenHeight * 0.03)
-        self.artSize = int(self.overlayHeight * 0.95)
+        self.overlayX = int(self.screenWidth * 1.0 - self.overlayWidth - 20)
+        self.overlayY = int(self.screenHeight * 0.02)
+        self.artSize = int(self.overlayHeight * 0.90)
         self.fontSizeName = int(self.overlayHeight * 0.17)
         self.fontSizeArtist = int(self.overlayHeight * 0.15)
 
@@ -38,6 +40,8 @@ class Overlay:
         self.root.configure(bg="black")
         self.hideTimer = None
         self.root.bind("<Enter>", self.onMouseEnter)
+        self.accentBar = tk.Frame(self.root, bg="gray", width=5)
+        self.accentBar.pack(side="left", fill="y")
 
         # album art attributes
         self.artLabel = tk.Label(self.root, bg="black")
@@ -45,7 +49,7 @@ class Overlay:
 
         # text area
         self.textFrame = tk.Frame(self.root, bg="black")
-        self.textFrame.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        self.textFrame.pack(side="left", fill="both", expand=True, padx=(0, 15))
 
         # song name attributes
         self.nameLabel = tk.Label(
@@ -53,10 +57,10 @@ class Overlay:
             text="Nothing playing",
             fg="white",
             bg="black",
-            font=("Arial", self.fontSizeName, "bold"),
+            font=("Terminal", self.fontSizeName, "bold"),
             anchor="w",
         )
-        self.nameLabel.pack(fill="x")
+        self.nameLabel.pack(fill="x", expand=True)
 
         # artist name attributes
         self.artistLabel = tk.Label(
@@ -64,10 +68,16 @@ class Overlay:
             text="",
             fg="gray",
             bg="black",
-            font=("Arial", self.fontSizeArtist),
+            font=("Terminal", self.fontSizeArtist),
             anchor="w",
         )
-        self.artistLabel.pack(fill="x")
+        self.artistLabel.pack(fill="x", expand=True)
+
+        if getCurrentTrack() is None:
+            self.nameLabel.config(text="Nothing playing.")
+            self.artistLabel.config(text="")
+            self.artLabel.config(image="")
+            self.accentBar.configure(bg="red")
 
     def fetchArt(self, url):
         # fetches albun art from spotify, resizes it to fit the overlay
@@ -164,14 +174,10 @@ class Overlay:
         if maxWidth <= 1:
             maxWidth = self.overlayWidth - self.artSize - 40
         self.nameLabel.config(text=self.truncateText(track["name"], maxWidth))
-        self.artistLabel.config(text=track["artist"] + " ♫")
+        self.artistLabel.config(text=track["artist"])
         self.artLabel.config(image=art)
         self.artLabel.image = art  # type: ignore
-        self.root.configure(bg=bg)
-        self.artLabel.configure(bg=bg)
-        self.textFrame.configure(bg=bg)
-        self.nameLabel.configure(bg=bg, fg=textColor)
-        self.artistLabel.configure(bg=bg, fg=textColor)
+        self.accentBar.configure(bg=bg)
 
     def applyNoTrack(self):
         # resets overlay to a neutral state when Spotify reports nothing is playing
