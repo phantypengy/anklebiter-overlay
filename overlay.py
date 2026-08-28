@@ -95,25 +95,17 @@ class Overlay:
         return text + "..."
 
     def onMouseEnter(self, event):
-        # when mouse enters the overlay, cancels any hide timers and resets opacity to full, then starts polling mouse position
         if self.hideTimer:
             self.root.after_cancel(self.hideTimer)
             self.hideTimer = None
         self.root.attributes("-alpha", 0.0)
-        self.pollMouse()
 
-    def pollMouse(self):
-        # polls mouse position every 100ms, starts fade out if mouse leaves the overlay
+    def onMouseLeave(self, event):
         x, y = self.root.winfo_pointerxy()
-        winX = self.root.winfo_rootx()
-        winY = self.root.winfo_rooty()
-        winW = self.root.winfo_width()
-        winH = self.root.winfo_height()
-
+        winX, winY = self.root.winfo_rootx(), self.root.winfo_rooty()
+        winW, winH = self.root.winfo_width(), self.root.winfo_height()
         if not (winX <= x <= winX + winW and winY <= y <= winY + winH):
             self.hideTimer = self.root.after(1000, self.fadeIn)
-        else:
-            self.root.after(100, self.pollMouse)
 
     def fadeIn(self, alpha=0.0):
         # function to fade in overlay once mouse leaves
