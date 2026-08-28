@@ -99,13 +99,16 @@ class Overlay:
             self.root.after_cancel(self.hideTimer)
             self.hideTimer = None
         self.root.attributes("-alpha", 0.0)
+        self.pollMouse()  # back to polling for the leave-detection, self-correcting
 
-    def onMouseLeave(self, event):
+    def pollMouse(self):
         x, y = self.root.winfo_pointerxy()
         winX, winY = self.root.winfo_rootx(), self.root.winfo_rooty()
         winW, winH = self.root.winfo_width(), self.root.winfo_height()
         if not (winX <= x <= winX + winW and winY <= y <= winY + winH):
             self.hideTimer = self.root.after(1000, self.fadeIn)
+        else:
+            self.root.after(100, self.pollMouse)
 
     def fadeIn(self, alpha=0.0):
         # function to fade in overlay once mouse leaves
