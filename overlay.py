@@ -50,7 +50,7 @@ class Overlay:
         # song name attributes
         self.nameLabel = tk.Label(
             self.textFrame,
-            text="Loading...",
+            text="Nothing playing",
             fg="white",
             bg="black",
             font=("Arial", self.fontSizeName, "bold"),
@@ -155,6 +155,8 @@ class Overlay:
 
             # update UI back on the main thread
             self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
+        else:
+            self.root.after(0, self.applyNoTrack)
 
     def applyUpdate(self, track, art, bg, textColor):
         # applies updates to the UI elements, truncates text if necessary to fit the overlay
@@ -170,6 +172,18 @@ class Overlay:
         self.textFrame.configure(bg=bg)
         self.nameLabel.configure(bg=bg, fg=textColor)
         self.artistLabel.configure(bg=bg, fg=textColor)
+
+    def applyNoTrack(self):
+        # resets overlay to a neutral state when Spotify reports nothing is playing
+        self.nameLabel.config(text="Nothing playing")
+        self.artistLabel.config(text="")
+        self.artLabel.config(image=None)
+        self.artLabel.image = None  # type: ignore
+        self.root.configure(bg="black")
+        self.artLabel.configure(bg="black")
+        self.textFrame.configure(bg="black")
+        self.nameLabel.configure(bg="black", fg="white")
+        self.artistLabel.configure(bg="black", fg="gray")
 
     def run(self):
         # starts the overlay and begins update loop
