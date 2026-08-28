@@ -54,7 +54,7 @@ class Overlay:
             text="Nothing playing",
             fg="white",
             bg="black",
-            font=("Cambria", self.fontSizeName, "bold"),
+            font=("Segoe UI", self.fontSizeName, "bold"),
             anchor="w",
         )
         self.nameLabel.pack(fill="x", expand=True)
@@ -65,7 +65,7 @@ class Overlay:
             text="",
             fg="gray",
             bg="black",
-            font=("Cambria", self.fontSizeArtist),
+            font=("Segoe UI", self.fontSizeArtist),
             anchor="w",
         )
         self.artistLabel.pack(fill="x", expand=True)
@@ -75,6 +75,8 @@ class Overlay:
             self.artistLabel.config(text="")
             self.artLabel.config(image="")
             self.accentBar.configure(bg="red")
+
+        self.isFetching = False
 
     def fetchArt(self, url):
         # fetches album art from spotify, resizes it to fit the overlay
@@ -142,26 +144,29 @@ class Overlay:
 
     def update(self):
         # updates the overlay with current track info, album art and colors, runs in a separate thread to avoid blocking the UI
-        thread = threading.Thread(target=self.fetchAndUpdate, daemon=True)
-        thread.start()
+        if not self.isFetching:
+            self.isFetching = True
+            thread = threading.Thread(target=self.fetchAndUpdate, daemon=True)
+            thread.start()
         self.root.after(1000, self.update)
 
     def fetchAndUpdate(self):
-        # fetches track info, album art and colors, then applies updates to the UI on the main thread
-        track = self.fetchTrack()
-        if track:
-            if track["name"] == self.nameLabel.cget("text") and track["artist"] == self.artistLabel.cget("text"):
-                return  # no update needed if track info hasn't changed
-            self.lastTrackName, self.lastTrackArtist = track["name"], track["artist"]
-            art, imageData = self.fetchArt(track["art"])
-            dominant, accent = self.getColors(imageData)
-            bg = "#%02x%02x%02x" % dominant
-            textColor = self.getTextColor(dominant)
+        try:
+            track = self.fetchTrack()
+            if track:
+                art, imageData = self.fetchArt(track["art"])
+                dominant, accent = self.getColors(imageData)
+                bg = "#%02x%02x%02x" % dominant
+                textColor = self.getTextColor(dominant)
+                self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
 
-            # update UI back on the main thread
-            self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
-        else:
-            self.root.after(0, self.applyNoTrack)
+            else:
+                self.root.after(0, self.applyNoTrack)
+        finally:
+            self.root.after(0, self.clearFetching)
+
+    def clearFetching(self):
+        self.isFetching = False
 
     def applyUpdate(self, track, art, bg, textColor):
         # applies updates to the UI elements, truncates text if necessary to fit the overlay
