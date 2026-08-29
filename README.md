@@ -12,4 +12,4 @@ currently this is only tested on windows 11.
 
 - disappears on mouse-over to allow for click-through
 - system tray icon to close the overlay
-- background colour changes to match album art
+- accent colour changes to match album art
