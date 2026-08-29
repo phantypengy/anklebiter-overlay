@@ -18,10 +18,10 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
       - name: Build exe
-        run: pyinstaller --onedir --noconsole --noupx --name anklebiter-overlay main.py
-      - name: Zip the build folder
+        run: pyinstaller --onedir --noconsole --noupx --collect-all pystray --name anklebiter-overlay main.py
+      - name: Zip build folder
         run: Compress-Archive -Path dist\anklebiter-overlay\* -DestinationPath dist\anklebiter-overlay.zip
-      - name: Create release and upload exe
+      - name: Create release and upload zip
         uses: softprops/action-gh-release@v2
         with:
           files: dist/anklebiter-overlay.zip
