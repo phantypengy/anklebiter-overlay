@@ -6,15 +6,16 @@ from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
 
+CLIENT_ID = "3d6586d75b104859b0e1228e0b2c810f"
+
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(
-        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+        client_id=CLIENT_ID,
         client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
         redirect_uri="http://127.0.0.1:8888/callback",
         scope="user-read-currently-playing",
     )
 )
-
 
 def getCurrentTrack():
     track = sp.current_user_playing_track()
