@@ -4,6 +4,10 @@ an overlay that displays song title, artist, and album art. written in python.
 
 ![Anklebiter Overlay](assets/preview.png)
 
+## IMPORTANT!
+
+as of now this only works if i personally whitelist your email.
+
 ## information
 
 currently this is only tested on windows 11.
