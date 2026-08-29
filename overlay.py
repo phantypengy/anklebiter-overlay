@@ -8,9 +8,6 @@ import pystray
 from colorthief import ColorThief
 from PIL import Image, ImageDraw, ImageTk
 
-from spotify import getCurrentTrack
-
-
 class Overlay:
     def __init__(self, fetchTrack):
         # initialises tkinter overlay window, sets variables to be used for style and layout
@@ -27,7 +24,7 @@ class Overlay:
         self.overlayX = int(self.screenWidth * 1.0 - self.overlayWidth - 20)
         self.overlayY = int(self.screenHeight * 0.02)
         self.artSize = int(self.overlayHeight * 0.90)
-        self.fontSizeName = int(self.overlayHeight * 0.17)
+        self.fontSizeName = int(self.overlayHeight * 0.16)
         self.fontSizeArtist = int(self.overlayHeight * 0.15)
 
         # main overlay window
@@ -57,7 +54,7 @@ class Overlay:
             text="Nothing playing",
             fg="white",
             bg="black",
-            font=("Terminal", self.fontSizeName, "bold"),
+            font=("Segoe UI", self.fontSizeName, "bold"),
             anchor="w",
         )
         self.nameLabel.pack(fill="x", expand=True)
@@ -68,20 +65,22 @@ class Overlay:
             text="",
             fg="gray",
             bg="black",
-            font=("Terminal", self.fontSizeArtist),
+            font=("Segoe UI", self.fontSizeArtist),
             anchor="w",
         )
         self.artistLabel.pack(fill="x", expand=True)
 
-        if getCurrentTrack() is None:
+        if self.fetchTrack() is None:
             self.nameLabel.config(text="Nothing playing.")
             self.artistLabel.config(text="")
             self.artLabel.config(image="")
             self.accentBar.configure(bg="red")
 
+        self.isFetching = False
+
     def fetchArt(self, url):
-        # fetches albun art from spotify, resizes it to fit the overlay
-        # and returns both the image and raw data for color extraction
+        # fetches album art from spotify, resizes it to fit the overlay
+        # and returns both the image and raw data for color extraction (via colorthief)
         with urllib.request.urlopen(url) as response:
             data = response.read()
         img = Image.open(io.BytesIO(data))
@@ -98,21 +97,16 @@ class Overlay:
         return text + "..."
 
     def onMouseEnter(self, event):
-        # when mouse enters the overlay, cancels any hide timers and resets opacity to full, then starts polling mouse position
         if self.hideTimer:
             self.root.after_cancel(self.hideTimer)
             self.hideTimer = None
         self.root.attributes("-alpha", 0.0)
-        self.pollMouse()
+        self.pollMouse()  # back to polling for the leave-detection, self-correcting
 
     def pollMouse(self):
-        # polls mouse position every 100ms, starts fade out if mouse leaves the overlay
         x, y = self.root.winfo_pointerxy()
-        winX = self.root.winfo_rootx()
-        winY = self.root.winfo_rooty()
-        winW = self.root.winfo_width()
-        winH = self.root.winfo_height()
-
+        winX, winY = self.root.winfo_rootx(), self.root.winfo_rooty()
+        winW, winH = self.root.winfo_width(), self.root.winfo_height()
         if not (winX <= x <= winX + winW and winY <= y <= winY + winH):
             self.hideTimer = self.root.after(1000, self.fadeIn)
         else:
@@ -150,23 +144,29 @@ class Overlay:
 
     def update(self):
         # updates the overlay with current track info, album art and colors, runs in a separate thread to avoid blocking the UI
-        thread = threading.Thread(target=self.fetchAndUpdate, daemon=True)
-        thread.start()
+        if not self.isFetching:
+            self.isFetching = True
+            thread = threading.Thread(target=self.fetchAndUpdate, daemon=True)
+            thread.start()
         self.root.after(1000, self.update)
 
     def fetchAndUpdate(self):
-        # fetches track info, album art and colors, then applies updates to the UI on the main thread
-        track = self.fetchTrack()
-        if track:
-            art, imageData = self.fetchArt(track["art"])
-            dominant, accent = self.getColors(imageData)
-            bg = "#%02x%02x%02x" % dominant
-            textColor = self.getTextColor(dominant)
+        try:
+            track = self.fetchTrack()
+            if track:
+                art, imageData = self.fetchArt(track["art"])
+                dominant, accent = self.getColors(imageData)
+                bg = "#%02x%02x%02x" % dominant
+                textColor = self.getTextColor(dominant)
+                self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
 
-            # update UI back on the main thread
-            self.root.after(0, lambda: self.applyUpdate(track, art, bg, textColor))
-        else:
-            self.root.after(0, self.applyNoTrack)
+            else:
+                self.root.after(0, self.applyNoTrack)
+        finally:
+            self.root.after(0, self.clearFetching)
+
+    def clearFetching(self):
+        self.isFetching = False
 
     def applyUpdate(self, track, art, bg, textColor):
         # applies updates to the UI elements, truncates text if necessary to fit the overlay
@@ -209,7 +209,7 @@ class Overlay:
 
         self.root.mainloop()
 
-    def quit(self):
+    def quit(self, icon=None, item=None):
         # ends process when quit option is selected from tray icon
         self.trayIcon.stop()
         self.root.destroy()
